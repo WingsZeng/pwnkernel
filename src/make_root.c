@@ -5,6 +5,10 @@
 #include <linux/cred.h>
 #include <linux/fs.h>
 
+// There's TIF SECCOMP in linux kernel 5.15
+#define TIF_SECCOMP             8
+#define _TIF_SECCOMP            (1 << TIF_SECCOMP)
+
 #define PWN _IO('p', 1)
 
 MODULE_LICENSE("GPL"); 
@@ -52,19 +56,21 @@ static long device_ioctl(struct file *filp, unsigned int ioctl_num, unsigned lon
         return 0;
 }
 
-static struct file_operations fops = {
-  	.read = device_read,
-  	.write = device_write,
-  	.unlocked_ioctl = device_ioctl,
-  	.open = device_open,
-  	.release = device_release
+static struct proc_ops pops = {
+	.proc_read = device_read,
+	.proc_write = device_write,
+#ifdef CONFIG_COMPAT
+        .proc_compat_ioctl = device_ioctl,
+#endif
+        .proc_open = device_open,
+        .proc_release = device_release
 };
 
 struct proc_dir_entry *proc_entry = NULL;
 
 int init_module(void)
 {
-    	proc_entry = proc_create("pwn-college-root", 0666, NULL, &fops);
+    	proc_entry = proc_create("pwn-college-root", 0666, NULL, &pops);
   	return 0;
 }
 

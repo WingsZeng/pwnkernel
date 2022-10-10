@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-export KERNEL_VERSION=5.4
+export KERNEL_VERSION=5.15
 export BUSYBOX_VERSION=1.32.0
 
 #
@@ -8,7 +8,7 @@ export BUSYBOX_VERSION=1.32.0
 #
 echo "[+] Checking / installing dependencies..."
 sudo apt-get -q update
-sudo apt-get -q install -y bison flex libelf-dev cpio build-essential libssl-dev qemu-system-x86
+sudo apt-get -q install -y bison flex libelf-dev cpio build-essential libssl-dev qemu-system-x86 dwarves
 
 #
 # linux kernel
@@ -48,6 +48,11 @@ echo "CONFIG_DEBUG_FS=y" >> linux-$KERNEL_VERSION/.config
 echo "CONFIG_DEBUG_INFO_DWARF4=y" >> linux-$KERNEL_VERSION/.config
 echo "CONFIG_DEBUG_INFO_BTF=y" >> linux-$KERNEL_VERSION/.config
 echo "CONFIG_FRAME_POINTER=y" >> linux-$KERNEL_VERSION/.config
+echo "CONFIG_SND_VIRTIO=n" >> linux-$KERNEL_VERSION/.config
+echo "CONFIG_VIRTIO_IOMMU=n" >> linux-$KERNEL_VERSION/.config
+echo "CONFIG_DEBUG_INFO_COMPRESSED=n" >> linux-$KERNEL_VERSION/.config
+echo "CONFIG_DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT=n" >> linux-$KERNEL_VERSION/.config
+
 make -C linux-$KERNEL_VERSION -j16 bzImage
 
 #
@@ -79,7 +84,9 @@ cp -a busybox-$BUSYBOX_VERSION/_install/* fs
 #
 
 echo "[+] Building modules..."
-cd src
+cd linux-$KERNEL_VERSION
+make modules -j16
+cd ../src
 make
 cd ..
 cp src/*.ko fs/
